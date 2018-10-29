@@ -1,0 +1,6 @@
+click
+numpy
+Pillow
+matplotlib
+tables
+pandas
