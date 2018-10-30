@@ -1,0 +1,26 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+click = "*"
+numpy = "*"
+tensorflow = ">=1.0.0"
+matplotlib = "*"
+Pillow = "*"
+pylint = "*"
+scipy = "*"
+pandas = "*"
+opencv-python = "*"
+tables = "*"
+tf-unet = {editable = true, path = "."}
+
+[dev-packages]
+pylint = "*"
+jupyter = "*"
+pytest = "*"
+"autopep8" = "*"
+
+[requires]
+python_version = "3.6"
