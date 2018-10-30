@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxtst6 \
     libfontconfig1 \
     libxrender1 \
-    libsm6 && \
+    libsm6 \
+    tmux && \
     rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /app/env && \
