@@ -10,7 +10,6 @@ services:
     command: bash
     volumes:
       - '../.:/app/src'
-    network_mode: host
     ports: ["${TBPORT:-6056}:${TBPORT:-6006}", "${JNPORT:-6059}:${JNPORT:-8888}"]
 
   bash-gpu:
@@ -25,5 +24,4 @@ services:
     command: bash  
     volumes:
       - '../.:/app/src'
-    network_mode: host
     ports: ["${TBPORT:-6056}:${TBPORT:-6006}", "${JNPORT:-6059}:${JNPORT:-8888}"]
