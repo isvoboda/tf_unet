@@ -99,6 +99,7 @@ class InnoH5(BaseDataProvider):
         except StopIteration:
             self.rng.shuffle(self.indices)
             self.iter = iter(self.indices)
+            i_an = next(self.iter)
 
         an_row = self.an_df.iloc[i_an]
         img_df = self.img_df.loc[self.img_df["image_id"] == an_row["image_id"]]
