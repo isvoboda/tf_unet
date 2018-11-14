@@ -52,14 +52,14 @@ class InnoH5(BaseDataProvider):
         self.img_df = None
         self.an_df = None
 
-        self._load_data()
+        self._load_df()
 
         self.rng = np.random.RandomState(seed)
         self.indices = list(range(len(self.an_df)))
         self.rng.shuffle(self.indices)
         self.iter = iter(self.indices)
 
-    def _load_data(self):
+    def _load_df(self):
         with pd.HDFStore(self.h5_img_path, "r") as hdf:
             self.img_df = hdf[self.img_df_name]
 
@@ -93,7 +93,7 @@ class InnoH5(BaseDataProvider):
 
         return pad_img
 
-    def _next_data(self):
+    def _get_data_label(self):
         try:
             i_an = next(self.iter)
         except StopIteration:
@@ -110,23 +110,40 @@ class InnoH5(BaseDataProvider):
         data = np.array(Image.open(img_path), np.float32)
         label = np.array(Image.open(an_path), np.uint8) >= 1
 
-        data = self._pad(data, (self.nx, self.nx))
-        label = self._pad(label, (self.nx, self.nx))
+        return data, label
 
-        if data.shape[0] - self.nx == 0:
-            iy = 0
+    def _crop_data_label(self, data, label):
+        if data.shape[0] - self.nx <= 0:
+            start_y = 0
+            end_y = start_y + data.shape[0]
         else:
-            iy = self.rng.randint(0, data.shape[0] - self.nx)
+            start_y = self.rng.randint(0, data.shape[0] - self.nx)
+            end_y = start_y + self.nx
 
-        if data.shape[1] - self.nx == 0:
-            ix = 0
+        if data.shape[1] - self.nx <= 0:
+            start_x = 0
+            end_x = start_x + data.shape[1]
         else:
-            ix = self.rng.randint(0, data.shape[1] - self.nx)
+            start_x = self.rng.randint(0, data.shape[1] - self.nx)
+            end_x = start_x + self.nx
 
-        sly = slice(iy, iy+self.nx)
-        slx = slice(ix, ix+self.nx)
+        sly = slice(start_y, end_y)
+        slx = slice(start_x, end_x)
 
-        in_data = data[sly, slx]
-        in_label = np.clip(label[sly, slx], 0, 1)
+        crop_data = data[sly, slx]
+        crop_label = np.clip(label[sly, slx], 0, 1)
+
+        return crop_data, crop_label
+
+    def _next_data(self):
+        data, label = self._get_data_label()
+        crop_data, crop_label = self._crop_data_label(data, label)
+
+        while crop_label.sum() == 0:
+            data, label = self._get_data_label()
+            crop_data, crop_label = self._crop_data_label(data, label)
+
+        in_data = self._pad(crop_data, (self.nx, self.nx))
+        in_label = self._pad(crop_label, (self.nx, self.nx))
 
         return in_data, in_label
