@@ -109,7 +109,7 @@ class InnoH5(BaseDataProvider):
             img_df.iloc[0], "src_image_path"))
 
         data = np.array(Image.open(img_path), np.float32)
-        label = np.array(Image.open(an_path), np.int) >= 1
+        label = np.array(Image.open(an_path), np.bool) >= 1
 
         return data, label
 
@@ -132,7 +132,7 @@ class InnoH5(BaseDataProvider):
         slx = slice(start_x, end_x)
 
         crop_data = data[sly, slx]
-        crop_label = np.clip(label[sly, slx], 0, 1)
+        crop_label = label[sly, slx]
 
         return crop_data, crop_label
 
