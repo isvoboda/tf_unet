@@ -40,13 +40,14 @@ class InnoH5(BaseDataProvider):
     n_class = 2
 
     def __init__(self, nx, h5_img_path, img_df_name, h5_an_path, an_df_name,
-                 a_min=0, a_max=255, seed=5):
+                 min_ratio=0.1, a_min=0, a_max=255, seed=5):
         super(InnoH5, self).__init__(a_min, a_max)
         self.nx = nx
         self.h5_img_path = h5_img_path
         self.img_df_name = img_df_name
         self.h5_an_path = h5_an_path
         self.an_df_name = an_df_name
+        self.min_ratio = min_ratio
         self.base_path = posixpath.dirname(h5_img_path)
 
         self.img_df = None
@@ -108,7 +109,7 @@ class InnoH5(BaseDataProvider):
             img_df.iloc[0], "src_image_path"))
 
         data = np.array(Image.open(img_path), np.float32)
-        label = np.array(Image.open(an_path), np.uint8) >= 1
+        label = np.array(Image.open(an_path), np.int) >= 1
 
         return data, label
 
@@ -139,7 +140,7 @@ class InnoH5(BaseDataProvider):
         data, label = self._get_data_label()
         crop_data, crop_label = self._crop_data_label(data, label)
 
-        while crop_label.sum() == 0:
+        while self.min_ratio > (crop_label.sum() / crop_label.size):
             data, label = self._get_data_label()
             crop_data, crop_label = self._crop_data_label(data, label)
 
