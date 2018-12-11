@@ -36,11 +36,11 @@ class InnoH5(BaseDataProvider):
     Expects the innovatrics h5 data
     """
 
-    channels = 1
+    channels = 3
     n_class = 2
 
     def __init__(self, nx, h5_img_path, img_df_name, h5_an_path, an_df_name,
-                 min_ratio=0.1, a_min=0, a_max=255, seed=5):
+                 n_channels=1, min_ratio=0.1, a_min=0, a_max=255, seed=5):
         super(InnoH5, self).__init__(a_min, a_max)
         self.nx = nx
         self.h5_img_path = h5_img_path

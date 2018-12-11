@@ -51,7 +51,8 @@ def parse_args():
 if __name__ == '__main__':
 
     flags = parse_args()     
-    generator = InnoH5(INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df)
+    generator = InnoH5(
+        INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df)
     
     fig, ax = plt.subplots(1,2, figsize=(12,4))
     for _ in range(100):
