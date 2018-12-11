@@ -20,6 +20,7 @@ author: borec
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import argparse
 import posixpath
 
 import matplotlib.pyplot as plt
@@ -28,41 +29,53 @@ import pandas as pd
 from PIL import Image
 from scipy.ndimage import gaussian_filter
 
-from tf_unet.inno_data import InnoH5
 from tf_unet import unet
+from tf_unet.inno_data import InnH5Asphalt
 
 INPUT_SIZE = 572
-# IMG_H5 = "/mnt/data/Tasks/XXXX_Asphalt_train_data/dataset/images.h5"
-# AN_H5 = "/mnt/data/Tasks/XXXX_Asphalt_train_data/dataset/annotations.h5"
-IMG_H5 = "../data/images.h5"
-AN_H5 = "../data/annotations.h5"
+
+def parse_args():
+    description = ("Train UNet on Asphalt data")
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("--img-h5", required=True, type=str)
+    parser.add_argument("--img-df", required=False, default="df", type=str)
+    parser.add_argument("--ann-h5", required=True, type=str)
+    parser.add_argument("--ann-df", required=False, default="df", type=str)
+    parser.add_argument("--batch-size", required=False, type=int, default=1)
+    args = parser.parse_args()
+    return args
+
 
 if __name__ == '__main__':
-    generator = InnoH5(INPUT_SIZE, IMG_H5, "df", AN_H5, "df")
+    flags = parse_args()   
+    generator = InnH5Asphalt(
+        INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df)
     
-    # fig, ax = plt.subplots(1,2, figsize=(12,4))
-    # for _ in range(100):
-    #     img, label = generator(1)
-    #     ax[0].imshow(img[0, ..., 0], aspect="auto", cmap=plt.cm.gray)
-    #     ax[1].imshow(label[0, ..., 1], aspect="auto", cmap=plt.cm.gray)
-    #     plt.pause(3)
-    #     plt.draw()
+    fig, ax = plt.subplots(1,2, figsize=(12,4))
+    for _ in range(100):
+        img, label = generator(1)
+        ax[0].imshow(img[0, ..., 0], aspect="auto", cmap=plt.cm.gray)
+        ax[1].imshow(label[0, ..., 1], aspect="auto", cmap=plt.cm.gray)
+        plt.pause(3)
+        plt.draw()
 
-    net = unet.Unet(channels=generator.channels, 
-                    n_class=generator.n_class, 
-                    layers=3,
-                    features_root=16,
-                    summaries=True,
-                    cost_kwargs={"class_weights": [0.33, 0.66]})
+    net = unet.Unet(
+        channels=generator.channels,
+        n_class=generator.n_class,
+        layers=3,
+        features_root=16,
+        summaries=True,
+        cost_kwargs={"class_weights": [0.33, 0.66]})
 
-    trainer = unet.Trainer(net,
-                           optimizer="momentum",
-                           batch_size=1,
-                           opt_kwargs=dict(learning_rate=0.001))
-    
-    path = trainer.train(generator, "./unet_trained",
-                         training_iters=10000,
-                         epochs=10,
-                         dropout=0.75,  # probability to keep units
-                         display_step=10)
-  
+    trainer = unet.Trainer(
+        net,
+        optimizer="momentum",
+        batch_size=1,
+        opt_kwargs=dict(learning_rate=0.001))
+
+    path = trainer.train(
+        generator, "./unet_trained",
+        training_iters=10000,
+        epochs=10,
+        dropout=0.75,  # probability to keep units
+        display_step=10)

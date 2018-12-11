@@ -22,50 +22,107 @@ from __future__ import (absolute_import, division, print_function,
 
 import posixpath
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
 
-from . image_util import BaseDataProvider
+from .image_util import BaseDataProvider
 
-class InnoH5(BaseDataProvider):
+__all__ = [
+    "InnH5Asphalt",
+    "InnH5PCards",
+]
+
+DF_IMAGE_ID = "image_id"
+DF_IMAGE_PATH = "src_image_path"
+DF_MASK_PATH = "mask_path"
+
+
+def pd_abs_paths(filename, dirname):
+    return posixpath.join(dirname, filename)
+
+
+class InnH5(BaseDataProvider):
     """
     Innovatrics data provider
 
     Expects the innovatrics h5 data
     """
 
-    channels = 3
     n_class = 2
 
-    def __init__(self, nx, h5_img_path, img_df_name, h5_an_path, an_df_name,
-                 n_channels=1, min_ratio=0.1, a_min=0, a_max=255, seed=5):
-        super(InnoH5, self).__init__(a_min, a_max)
+    def __init__(self, nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
+                 channels=1, a_min=0, a_max=255, seed=5):
+        super(InnH5, self).__init__(a_min, a_max, channels)
         self.nx = nx
         self.h5_img_path = h5_img_path
         self.img_df_name = img_df_name
-        self.h5_an_path = h5_an_path
-        self.an_df_name = an_df_name
-        self.min_ratio = min_ratio
-        self.base_path = posixpath.dirname(h5_img_path)
+        self.h5_ann_path = h5_ann_path
+        self.ann_df_name = ann_df_name
+        self.root_img_path = posixpath.dirname(h5_img_path)
+        self.root_ann_path = posixpath.dirname(h5_ann_path)
 
         self.img_df = None
-        self.an_df = None
+        self.ann_df = None
 
-        self._load_df()
+        self._load_dfs()
 
         self.rng = np.random.RandomState(seed)
-        self.indices = list(range(len(self.an_df)))
+        self.indices = list(range(len(self.ann_df)))
         self.rng.shuffle(self.indices)
         self.iter = iter(self.indices)
 
-    def _load_df(self):
+    def _load_dfs(self):
         with pd.HDFStore(self.h5_img_path, "r") as hdf:
             self.img_df = hdf[self.img_df_name]
+            self.img_df[DF_IMAGE_PATH] = self.img_df[DF_IMAGE_PATH].apply(
+                pd_abs_paths, args=(self.root_img_path,))
 
-        with pd.HDFStore(self.h5_an_path, "r") as hdf:
-            self.an_df = hdf[self.an_df_name]
+        with pd.HDFStore(self.h5_ann_path, "r") as hdf:
+            self.ann_df = hdf[self.ann_df_name]
+            self.ann_df[DF_MASK_PATH] = self.ann_df[DF_MASK_PATH].apply(
+                pd_abs_paths, args=(self.root_ann_path,))
+
+    def _get_data_label(self):
+        try:
+            i_ann = next(self.iter)
+        except StopIteration:
+            self.rng.shuffle(self.indices)
+            self.iter = iter(self.indices)
+            i_ann = next(self.iter)
+
+        ann_row = self.ann_df.iloc[i_ann]
+        select_condition = self.img_df[DF_IMAGE_ID] == ann_row[DF_IMAGE_ID]
+        img_df = self.img_df.loc[select_condition]
+        ann_path = ann_row[DF_MASK_PATH]
+        img_path = getattr(img_df.iloc[0], DF_IMAGE_PATH)
+
+        data = np.array(Image.open(img_path), np.float32)
+        label = np.array(Image.open(ann_path), np.bool) >= 1
+
+        return data, label
+
+    def _next_data(self):
+        return self._get_data_label()
+
+
+class InnH5Asphalt(InnH5):
+    """
+    Innovatrics data provider for Asphalt Images
+
+    Expects the innovatrics h5 data
+    """
+
+    n_class = 2
+
+    def __init__(self, nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
+                 channels=1, min_ratio=0.1, a_min=0, a_max=255, seed=5):
+        super(InnH5Asphalt, self).__init__(
+            nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name, channels,
+            a_min, a_max, seed)
+        self.min_ratio = min_ratio
 
     def _pad(self, img, shape):
 
@@ -96,20 +153,20 @@ class InnoH5(BaseDataProvider):
 
     def _get_data_label(self):
         try:
-            i_an = next(self.iter)
+            i_ann = next(self.iter)
         except StopIteration:
             self.rng.shuffle(self.indices)
             self.iter = iter(self.indices)
-            i_an = next(self.iter)
+            i_ann = next(self.iter)
 
-        an_row = self.an_df.iloc[i_an]
-        img_df = self.img_df.loc[self.img_df["image_id"] == an_row["image_id"]]
-        an_path = posixpath.join(self.base_path, an_row["mask_path"])
-        img_path = posixpath.join(self.base_path, getattr(
-            img_df.iloc[0], "src_image_path"))
+        ann_row = self.ann_df.iloc[i_ann]
+        select_condition = self.img_df[DF_IMAGE_ID] == ann_row[DF_IMAGE_ID]
+        img_df = self.img_df.loc[select_condition]
+        ann_path = ann_row[DF_MASK_PATH]
+        img_path = getattr(img_df.iloc[0], DF_IMAGE_PATH)
 
         data = np.array(Image.open(img_path), np.float32)
-        label = np.array(Image.open(an_path), np.bool) >= 1
+        label = np.array(Image.open(ann_path), np.bool) >= 1
 
         return data, label
 
@@ -148,3 +205,27 @@ class InnoH5(BaseDataProvider):
         in_label = self._pad(crop_label, (self.nx, self.nx))
 
         return in_data, in_label
+
+
+class InnH5PCards(InnH5):
+    """
+    Innovatrics data provider for Plastic Cards
+
+    Expects the innovatrics h5 data
+    """
+
+    n_class = 2
+
+    def __init__(self, nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
+                 channels=3, a_min=0, a_max=255, seed=5):
+        super(InnH5PCards, self).__init__(
+            nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name, channels,
+            a_min, a_max, seed)
+
+    def _post_process(self, data, labels):
+        data, labels = super()._post_process(data, labels)
+        if data.shape[:2] != (self.nx, self.nx):
+            data = cv2.resize(data, (self.nx, self.nx), interpolation=cv2.INTER_LINEAR)
+            labels = cv2.resize(
+                labels, (self.nx, self.nx), interpolation=cv2.INTER_NEAREST)
+        return data, labels

@@ -35,13 +35,13 @@ class BaseDataProvider(object):
 
     """
     
-    channels = 1
     n_class = 2
     
 
-    def __init__(self, a_min=None, a_max=None):
+    def __init__(self, a_min=None, a_max=None, channels=1):
         self.a_min = a_min if a_min is not None else -np.inf
         self.a_max = a_max if a_min is not None else np.inf
+        self.channels = channels
 
     def _load_data_and_label(self):
         data, label = self._next_data()
@@ -117,7 +117,7 @@ class SimpleDataProvider(BaseDataProvider):
     """
     
     def __init__(self, data, label, a_min=None, a_max=None, channels=1, n_class = 2):
-        super(SimpleDataProvider, self).__init__(a_min, a_max)
+        super(SimpleDataProvider, self).__init__(a_min, a_max, channels)
         self.data = data
         self.label = label
         self.file_count = data.shape[0]

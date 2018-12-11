@@ -13,7 +13,7 @@
 
 
 '''
-Created on Nov 10, 2018
+Created on Dec 10, 2018
 
 author: borec
 '''
@@ -30,19 +30,19 @@ from PIL import Image
 from scipy.ndimage import gaussian_filter
 
 from tf_unet import unet
-from tf_unet.inno_data import InnoH5
+from tf_unet.inno_data import InnH5PCards
 
-INPUT_SIZE = 116
+INPUT_SIZE = 572
 
 
 def parse_args():
     description = ("Train UNet on Plastic Cards data")
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--img-h5", required=True, type=str)
-    parser.add_argument("--img_df", required=False, default="images", type=str)
+    parser.add_argument("--img-df", required=False, default="images", type=str)
     parser.add_argument("--ann-h5", required=True, type=str)
-    parser.add_argument("--ann_df", required=False,
-                        default="annotations", type=str)
+    parser.add_argument("--ann-df", required=False, default="annotations",
+                        type=str)
     parser.add_argument("--batch-size", required=False, type=int, default=1)
     args = parser.parse_args()
     return args
@@ -50,11 +50,12 @@ def parse_args():
 
 if __name__ == '__main__':
 
-    flags = parse_args()     
-    generator = InnoH5(
-        INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df)
-    
-    fig, ax = plt.subplots(1,2, figsize=(12,4))
+    flags = parse_args()
+    generator = InnH5PCards(
+        INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df,
+        channels=3)
+
+    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
     for _ in range(100):
         img, label = generator(1)
         ax[0].imshow(img[0, ..., 0], aspect="auto", cmap=plt.cm.gray)
