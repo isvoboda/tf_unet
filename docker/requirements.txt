@@ -4,3 +4,4 @@ Pillow
 matplotlib
 tables
 pandas
+opencv-python
