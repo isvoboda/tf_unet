@@ -33,7 +33,7 @@ from scipy.ndimage import gaussian_filter
 from tf_unet import unet
 from tf_unet.inno_data import InnH5PCards
 
-INPUT_SIZE = 572
+INPUT_SIZE = (2040, 1278)
 
 
 def parse_args():
@@ -57,26 +57,18 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"]="{}".format(flags.gpu_id)
 
     generator = InnH5PCards(
-        INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df,
+        *INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df,
         channels=3)
-
-#    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
-#    for _ in range(100):
-#        img, label = generator(1)
-#        ax[0].imshow(img[0, ..., 0], aspect="auto", cmap=plt.cm.gray)
-#        ax[1].imshow(label[0, ..., 1], aspect="auto", cmap=plt.cm.gray)
-#        plt.pause(3)
-#        plt.draw()
 
     net = unet.Unet(
         channels=generator.channels, n_class=generator.n_class, layers=5,
         features_root=16, summaries=True,
-        cost_kwargs={"class_weights": [0.5, 0.5]})
+        cost_kwargs={"class_weights": [0.15, 0.85]})
 
     trainer = unet.Trainer(
         net, optimizer="momentum", batch_size=flags.batch_size,
         opt_kwargs=dict(learning_rate=0.001))
 
     path = trainer.train(
-        generator, "./unet_trained-2", training_iters=10000, epochs=10,
+        generator, "./unet_trained", training_iters=10000, epochs=10,
         dropout=0.85, display_step=250)

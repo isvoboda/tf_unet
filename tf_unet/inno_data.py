@@ -53,10 +53,11 @@ class InnH5(BaseDataProvider):
 
     n_class = 2
 
-    def __init__(self, nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
-                 channels=1, a_min=0, a_max=255, seed=5):
+    def __init__(self, nx, ny, h5_img_path, img_df_name, h5_ann_path,
+                 ann_df_name, channels=1, a_min=0, a_max=255, seed=5):
         super(InnH5, self).__init__(a_min, a_max, channels)
         self.nx = nx
+        self.ny = ny
         self.h5_img_path = h5_img_path
         self.img_df_name = img_df_name
         self.h5_ann_path = h5_ann_path
@@ -117,11 +118,12 @@ class InnH5Asphalt(InnH5):
 
     n_class = 2
 
-    def __init__(self, nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
-                 channels=1, min_ratio=0.1, a_min=0, a_max=255, seed=5):
+    def __init__(self, nx, ny, h5_img_path, img_df_name, h5_ann_path,
+                 ann_df_name, channels=1, min_ratio=0.1, a_min=0, a_max=255,
+                 seed=5):
         super(InnH5Asphalt, self).__init__(
-            nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name, channels,
-            a_min, a_max, seed)
+            nx, ny, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
+            channels, a_min, a_max, seed)
         self.min_ratio = min_ratio
 
     def _pad(self, img, shape):
@@ -151,25 +153,6 @@ class InnH5Asphalt(InnH5):
 
         return pad_img
 
-    def _get_data_label(self):
-        try:
-            i_ann = next(self.iter)
-        except StopIteration:
-            self.rng.shuffle(self.indices)
-            self.iter = iter(self.indices)
-            i_ann = next(self.iter)
-
-        ann_row = self.ann_df.iloc[i_ann]
-        select_condition = self.img_df[DF_IMAGE_ID] == ann_row[DF_IMAGE_ID]
-        img_df = self.img_df.loc[select_condition]
-        ann_path = ann_row[DF_MASK_PATH]
-        img_path = getattr(img_df.iloc[0], DF_IMAGE_PATH)
-
-        data = np.array(Image.open(img_path), np.float32)
-        label = np.array(Image.open(ann_path), np.bool) >= 1
-
-        return data, label
-
     def _crop_data_label(self, data, label):
         if data.shape[0] - self.nx <= 0:
             start_y = 0
@@ -196,10 +179,12 @@ class InnH5Asphalt(InnH5):
     def _next_data(self):
         data, label = self._get_data_label()
         crop_data, crop_label = self._crop_data_label(data, label)
+        crop_label_int = crop_label * 1
 
-        while self.min_ratio > (crop_label.sum() / crop_label.size):
+        while self.min_ratio > (crop_label_int.sum() / crop_label_int.size):
             data, label = self._get_data_label()
             crop_data, crop_label = self._crop_data_label(data, label)
+            crop_label_int = crop_label * 1
 
         in_data = self._pad(crop_data, (self.nx, self.nx))
         in_label = self._pad(crop_label, (self.nx, self.nx))
@@ -216,16 +201,16 @@ class InnH5PCards(InnH5):
 
     n_class = 2
 
-    def __init__(self, nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
+    def __init__(self, nx, ny, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
                  channels=3, a_min=0, a_max=255, seed=5):
         super(InnH5PCards, self).__init__(
-            nx, h5_img_path, img_df_name, h5_ann_path, ann_df_name, channels,
-            a_min, a_max, seed)
+            nx, ny, h5_img_path, img_df_name, h5_ann_path, ann_df_name,
+            channels, a_min, a_max, seed)
 
     def _post_process(self, data, labels):
         data, labels = super()._post_process(data, labels)
-        if data.shape[:2] != (self.nx, self.nx):
-            data = cv2.resize(data, (self.nx, self.nx), interpolation=cv2.INTER_LINEAR)
+        if data.shape[:2] != (self.ny, self.nx):
+            data = cv2.resize(data, (self.nx, self.ny), interpolation=cv2.INTER_LINEAR)
             labels = cv2.resize(
-                labels, (self.nx, self.nx), interpolation=cv2.INTER_NEAREST)
+                labels, (self.nx, self.ny), interpolation=cv2.INTER_NEAREST)
         return data, labels
