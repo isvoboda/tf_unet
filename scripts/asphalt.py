@@ -20,6 +20,14 @@ author: borec
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+# import ptvsd                                                                                                                         │
+
+# Allow other computers to attach to ptvsd at this IP address and port.                                                              │
+# ptvsd.enable_attach(address=('172.19.0.2', 6058), redirect_output=True)                                                              │
+
+# Pause the program until a remote debugger is attached                                                                              │
+# ptvsd.wait_for_attach()
+
 import argparse
 import os
 import posixpath
@@ -55,7 +63,7 @@ if __name__ == '__main__':
 
     generator = InnH5Asphalt(
         INPUT_SIZE, flags.img_h5, flags.img_df, flags.ann_h5, flags.ann_df,
-        channels=3)
+        channels=3, min_ratio=0.01)
     
 #    fig, ax = plt.subplots(1,2, figsize=(12,4))
 #    for _ in range(100):

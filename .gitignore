@@ -57,3 +57,8 @@ docs/_build
 
 # Binary
 **/*.png
+**/*.jpg
+**/*.jpeg
+
+# Hidden directories
+**/.*
