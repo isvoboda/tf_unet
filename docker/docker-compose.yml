@@ -12,7 +12,7 @@ services:
       - '../.:/app/src'
       - '/srv:/srv'
       - '/mnt:/mnt'
-    ports: ["${TBPORT:-6056}:${TBPORT:-6006}", "${JNPORT:-6059}:${JNPORT:-8888}"]
+    ports: ["${TBPORT:-6056}:6006", "${JNPORT:-6059}:8888", "${PDPORT:-6058}:6058"]
 
   bash-gpu:
     build:
@@ -28,4 +28,4 @@ services:
       - '../.:/app/src'
       - '/srv:/srv'
       - '/mnt:/mnt'
-    ports: ["${TBPORT:-6056}:${TBPORT:-6006}", "${JNPORT:-6059}:${JNPORT:-8888}"]
+    ports: ["${TBPORT:-6056}:6006", "${JNPORT:-6059}:8888", "${PDPORT:-6058}:6058"]
